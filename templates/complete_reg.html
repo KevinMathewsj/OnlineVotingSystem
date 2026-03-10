@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Complete Registration</title>
+</head>
+
+<body>
+
+    <h3>Face Registration</h3>
+
+    <form method="POST" onsubmit="return validate()">
+
+        <!-- <video id="video" width="300" height="250" autoplay></video>-->
+        <video id="video" width="400" height="300" autoplay></video><br><br>
+
+        <button type="button" onclick="capture()">Capture</button>
+        <button type="button" onclick="retake()">Retake</button><br><br>
+
+        <!-- <canvas id="canvas" width="300" height="250" style="display:none;"></canvas>
+    <img id="preview" width="300"><br><br>-->
+        <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+        <img id="preview" width="640"><br><br>
+
+        <label>New Contact Number:</label><br>
+        <input type="text" name="new_phone" required><br><br>
+
+        <input type="hidden" name="image_data" id="image_data">
+
+        <button type="submit">Submit Registration</button>
+
+    </form>
+
+    <script>
+        let video = document.getElementById("video");
+        let streamRef = null;
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    streamRef = stream;
+                    video.srcObject = stream;
+                })
+                .catch(() => alert("Camera access denied"));
+        }
+
+        startCamera();
+
+        function capture() {
+            const canvas = document.getElementById("canvas");
+            canvas.getContext("2d").drawImage(video, 0, 0, 400, 300);
+
+            const data = canvas.toDataURL("image/png", 0.6);
+            document.getElementById("preview").src = data;
+            document.getElementById("image_data").value = data;
+
+            stopCamera();
+        }
+
+        function retake() {
+            document.getElementById("preview").src = "";
+            document.getElementById("image_data").value = "";
+            startCamera();
+        }
+
+        function stopCamera() {
+            if (streamRef) {
+                streamRef.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        function validate() {
+            if (!document.getElementById("image_data").value) {
+                alert("Please capture your face before submitting!");
+                return false;
+            }
+            return true;
+        }
+    </script>
+
+</body>
+
+</html>

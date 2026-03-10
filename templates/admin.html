@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+<h2>Admin Control Panel</h2>
+
+<form method="POST">
+    <h3>Registration Period</h3>
+    Start Date & Time:<br>
+    <input type="datetime-local" name="reg_start" required><br><br>
+
+    End Date & Time:<br>
+    <input type="datetime-local" name="reg_end" required><br><br>
+
+    <h3>Voting Period</h3>
+    Start Date & Time:<br>
+    <input type="datetime-local" name="vote_start" required><br><br>
+
+    End Date & Time:<br>
+    <input type="datetime-local" name="vote_end" required><br><br>
+
+    <button type="submit">Save Configuration</button>
+</form>
+
+<br>
+<a href="/admin_result">View Results</a>
+
+</body>
+</html>

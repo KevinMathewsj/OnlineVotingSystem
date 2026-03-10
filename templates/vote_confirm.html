@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Face Verification</title>
+</head>
+
+<body>
+
+    <h3>Face Verification</h3>
+
+    <form method="POST" action="/confirm_vote" onsubmit="return validate()">
+
+        <input type="hidden" name="voter_id" value="{{ voter_id }}">
+
+        <!--<video id="video" width="300" height="250" autoplay></video><br><br>-->
+        <video id="video" width="400" height="300" autoplay></video><br><br>
+
+        <button type="button" onclick="capture()">Capture</button>
+        <button type="button" onclick="retake()">Retake</button><br><br>
+
+        <!--<canvas id="canvas" width="300" height="250" style="display:none;"></canvas>
+<img id="preview" width="300"><br><br>-->
+        <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+        <img id="preview" width="640"><br><br>
+
+        <input type="hidden" name="image_data" id="image_data">
+
+        <button type="submit">Verify Face</button>
+
+    </form>
+
+    <script>
+
+        let video = document.getElementById("video");
+        let streamRef = null;
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    streamRef = stream
+                    video.srcObject = stream
+                })
+        }
+
+        startCamera()
+
+        function capture() {
+
+            let canvas = document.getElementById("canvas")
+            canvas.getContext("2d").drawImage(video, 0, 0, 400, 300)
+
+            let data = canvas.toDataURL("image/png", 0.6)
+
+            document.getElementById("preview").src = data
+            document.getElementById("image_data").value = data
+
+            stopCamera()
+
+        }
+
+        function retake() {
+
+            document.getElementById("preview").src = ""
+            document.getElementById("image_data").value = ""
+
+            startCamera()
+
+        }
+
+        function stopCamera() {
+
+            if (streamRef) {
+                streamRef.getTracks().forEach(track => track.stop())
+                video.srcObject = null
+            }
+
+        }
+
+        function validate() {
+
+            if (!document.getElementById("image_data").value) {
+                alert("Please capture your face")
+                return false
+            }
+
+            return true
+        }
+
+    </script>
+
+</body>
+
+</html>

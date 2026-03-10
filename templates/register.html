@@ -1,0 +1,71 @@
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+    <title>Voter Registration</title>
+</head>
+
+<body>
+
+    <h2>Voter Registration</h2>
+
+    <form method="POST">
+
+        <label>Aadhaar Number:</label><br>
+        <input type="text" name="aadhaar" value="{{ aadhaar if aadhaar else '' }}" required><br><br>
+
+        <label>Phone Number:</label><br>
+        <input type="text" name="phone" value="{{ phone if phone else '' }}" required><br><br>
+
+        {% if show_email %}
+        <label>Enter Email to Receive OTP:</label><br>
+        <input type="email" name="email" required><br><br>
+        {% endif %}
+
+        <button type="submit">
+            {% if show_email %}
+            Send OTP
+            {% else %}
+            Verify Details
+            {% endif %}
+        </button>
+
+    </form>
+
+</body>
+
+</html> -->
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Voter Registration</h2>
+
+<form method="POST">
+
+    <label>Aadhaar Number</label>
+    <input type="text" name="aadhaar" value="{{ aadhaar if aadhaar else '' }}" required>
+
+    <label>Phone Number</label>
+    <input type="text" name="phone" value="{{ phone if phone else '' }}" required>
+
+    {% if show_email %}
+
+    <label>Email Address</label>
+    <input type="email" name="email" required>
+
+    {% endif %}
+
+    <button type="submit">
+
+        {% if show_email %}
+        Send OTP
+        {% else %}
+        Verify Details
+        {% endif %}
+
+    </button>
+
+</form>
+
+{% endblock %}

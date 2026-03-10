@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3>Select Candidate</h3>
+
+<!-- <form method="POST" action="/final_vote">
+
+    <input type="hidden" name="voter_id" value="{{ voter_id }}">
+
+    <label>
+
+        <input type="radio" name="candidate" value="DMK" required>
+        DMK Party
+
+    </label>
+
+    <br><br>
+
+    <label>
+
+        <input type="radio" name="candidate" value="TVK">
+        TVK Party
+
+    </label>
+
+    <br><br>
+
+    <button type="submit">Submit Vote</button>
+
+</form> -->
+<form method="POST" action="/final_vote">
+
+    <input type="hidden" name="voter_id" value="{{ voter_id }}">
+
+    <h3>Select Party</h3>
+
+    <label>
+        <input type="radio" name="candidate" value="DMK" required>
+
+        <img src="{{ url_for('static', filename='images/dmk.png') }}" width="40">
+
+        DMK
+    </label>
+
+    <br><br>
+
+    <label>
+        <input type="radio" name="candidate" value="TVK">
+
+        <img src="{{ url_for('static', filename='images/tvk.png') }}" width="40">
+
+        TVK
+    </label>
+
+    <br><br>
+
+    <button type="submit">Submit Vote</button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Secure Online Voting System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+
+    <div class="header">
+
+        <img src="{{ url_for('static',filename='images/india.png') }}">
+
+        <h1>Secure Online Voting System</h1>
+
+    </div>
+
+    <div class="navbar">
+
+        <a href="/">Home</a>
+        <a href="/register">Register</a>
+        <a href="/vote">Vote</a>
+        <a href="/admin_login">Admin</a>
+
+    </div>
+
+    <div class="container">
+
+        <div class="card">
+
+            {% block content %}
+
+            {% endblock %}
+
+        </div>
+
+    </div>
+
+    <div class="footer">
+
+        © 2026 Secure Online Voting System. All Rights Reserved.
+
+    </div>
+
+</body>
+
+</html>
