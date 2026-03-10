@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, send_file
-from db import cursor, db
+from db import cursor, db, execute, fetchone
 from otp_service import send_otp, verify_otp
 from face_utils import get_embedding, compare_embeddings
 import json
@@ -10,35 +10,29 @@ from datetime import datetime
 import os
 import base64
 
-# ---------------- FLASK APP ----------------
 app = Flask(__name__)
 
-# SECRET_KEY from environment variable for security
-app.secret_key = os.environ.get("SECRET_KEY", "fallback_dev_key")
+# Secret key from environment variable for Render
+app.secret_key = os.environ.get("SECRET_KEY", "securekey")
 
-# Allow larger image uploads
+# FIX: allow larger image uploads
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
-# Blockchain instance
 blockchain = Blockchain()
 
-# Admin credentials (hardcoded, optional to move to env)
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin123"
 
 # ---------------- HELPER FUNCTION ----------------
 def get_admin_config():
-    cursor.execute("SELECT * FROM admin_config LIMIT 1")
-    return cursor.fetchone()
+    return fetchone("SELECT * FROM admin_config LIMIT 1")
 
-# ---------------- ROUTES ----------------
-
-# Main root
+#----------------main root------------------
 @app.route("/")
 def home():
     return render_template("home.html")
 
-# Admin login
+# ---------------- ADMIN LOGIN ----------------
 @app.route("/admin_login", methods=["GET","POST"])
 def admin_login():
     if request.method == "POST":
@@ -47,48 +41,47 @@ def admin_login():
             return redirect("/admin")
     return render_template("admin_login.html")
 
-# Admin config
+# ---------------- ADMIN CONFIG ----------------
 @app.route("/admin", methods=["GET","POST"])
 def admin():
     if not session.get("admin"):
         return redirect("/admin_login")
 
     if request.method == "POST":
-        cursor.execute("DELETE FROM admin_config")
-        cursor.execute("""
-            INSERT INTO admin_config VALUES (%s,%s,%s,%s)
+        execute("DELETE FROM admin_config")
+        execute("""
+            INSERT INTO admin_config (reg_start, reg_end, vote_start, vote_end)
+            VALUES (?,?,?,?)
         """, (
             request.form["reg_start"],
             request.form["reg_end"],
             request.form["vote_start"],
             request.form["vote_end"]
         ))
-        db.commit()
 
     return render_template("admin.html")
 
-# Registration
+# ---------------- REGISTRATION ----------------
 @app.route("/register", methods=["GET","POST"])
 def register():
     config = get_admin_config()
     now = datetime.now()
 
-    if not config or not (config["reg_start"] <= now <= config["reg_end"]):
+    if not config or not (config["reg_start"] <= str(now) <= config["reg_end"]):
         return "Registration is currently closed"
 
     if request.method == "POST":
+
         aadhaar = request.form["aadhaar"]
         phone = request.form["phone"]
 
-        cursor.execute("SELECT * FROM registrations WHERE aadhaar=%s", (aadhaar,))
-        if cursor.fetchone():
+        if fetchone("SELECT * FROM registrations WHERE aadhaar=?", (aadhaar,)):
             return "Already Registered"
 
-        cursor.execute(
-            "SELECT * FROM citizens WHERE aadhaar=%s AND phone=%s",
+        user = fetchone(
+            "SELECT * FROM citizens WHERE aadhaar=? AND phone=?",
             (aadhaar, phone)
         )
-        user = cursor.fetchone()
 
         if not user:
             return "Invalid Aadhaar or Phone"
@@ -104,13 +97,14 @@ def register():
 
         # Email entered → send OTP
         email = request.form["email"]
+
         send_otp(email)
 
         return redirect(f"/otp?aadhaar={aadhaar}&email={email}")
 
     return render_template("register.html")
 
-# OTP verification
+# ---------------- OTP ----------------
 @app.route("/otp", methods=["GET","POST"])
 def otp():
     aadhaar = request.args.get("aadhaar")
@@ -122,66 +116,62 @@ def otp():
 
     return render_template("otp.html")
 
-# Complete registration
+# ---------------- COMPLETE REGISTRATION ----------------
 @app.route("/complete_reg", methods=["GET","POST"])
 def complete_reg():
     aadhaar = request.args.get("aadhaar")
-
-    cursor.execute("SELECT * FROM citizens WHERE aadhaar=%s", (aadhaar,))
-    user = cursor.fetchone()
+    user = fetchone("SELECT * FROM citizens WHERE aadhaar=?", (aadhaar,))
 
     if request.method == "POST":
         img_data = request.form["image_data"]
-
         header, encoded = img_data.split(",", 1)
         img_bytes = base64.b64decode(encoded)
 
         os.makedirs("faces", exist_ok=True)
         path = f"faces/{aadhaar}.png"
-
         with open(path, "wb") as f:
             f.write(img_bytes)
 
+        # Create embedding
         embedding = get_embedding(path)
 
-        cursor.execute("""
+        execute("""
             INSERT INTO registrations (aadhaar, new_phone, face_path, face_embedding)
-            VALUES (%s,%s,%s,%s)
+            VALUES (?,?,?,?)
         """, (
             aadhaar,
             request.form["new_phone"],
             path,
             json.dumps(embedding.tolist())
         ))
-        db.commit()
 
         return "Registration Successful"
 
     return render_template("complete_reg.html", user=user)
 
-# Voting
+# ---------------- VOTING ----------------
 @app.route("/vote", methods=["GET","POST"])
 def vote():
     config = get_admin_config()
     now = datetime.now()
 
-    if not config or not (config["vote_start"] <= now <= config["vote_end"]):
+    if not config or not (config["vote_start"] <= str(now) <= config["vote_end"]):
         return "Voting is currently closed"
 
     if request.method == "POST":
         voter_id = request.form["voter_id"]
         phone = request.form["phone"]
 
-        cursor.execute("""
+        user = fetchone("""
             SELECT r.face_path FROM registrations r
             JOIN citizens c ON r.aadhaar = c.aadhaar
-            WHERE c.voter_id=%s AND r.new_phone=%s
+            WHERE c.voter_id=? AND r.new_phone=?
         """, (voter_id, phone))
-        user = cursor.fetchone()
+
         if not user:
             return "Verification Failed"
 
-        # Duplicate vote check
+        # DUPLICATE VOTE CHECK
         for block in blockchain.chain:
             if isinstance(block.data, dict) and block.data["voter_id"] == voter_id:
                 return "You have already voted"
@@ -190,7 +180,7 @@ def vote():
 
     return render_template("vote_login.html")
 
-# Confirm vote
+# ---------------- CONFIRM VOTE ----------------
 @app.route("/confirm_vote", methods=["POST"])
 def confirm_vote():
     voter_id = request.form["voter_id"]
@@ -206,12 +196,11 @@ def confirm_vote():
     with open(live_path, "wb") as f:
         f.write(img_bytes)
 
-    cursor.execute("""
+    row = fetchone("""
         SELECT r.face_embedding FROM registrations r
         JOIN citizens c ON r.aadhaar=c.aadhaar
-        WHERE c.voter_id=%s
+        WHERE c.voter_id=?
     """, (voter_id,))
-    row = cursor.fetchone()
 
     if not row:
         return "User not registered"
@@ -225,7 +214,7 @@ def confirm_vote():
 
     return render_template("vote_party.html", voter_id=voter_id)
 
-# Final vote submission
+# ---------------- FINAL VOTE ----------------
 @app.route("/final_vote", methods=["POST"])
 def final_vote():
     voter_id = request.form["voter_id"]
@@ -242,13 +231,13 @@ def final_vote():
 
     return "Vote Stored Successfully"
 
-# Admin results
+# ---------------- ADMIN RESULTS ----------------
 @app.route("/admin_result")
 def admin_result():
     results = blockchain.count_votes()
     return render_template("admin_result.html", results=results)
 
-# Export results as PDF
+# ---------------- EXPORT PDF ----------------
 @app.route("/admin_result_pdf")
 def admin_result_pdf():
     if not session.get("admin"):
